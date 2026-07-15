@@ -11,6 +11,24 @@
 
 $ErrorActionPreference = 'Stop'
 
+function Ensure-AgentExecutionPolicy {
+    $policy = Get-ExecutionPolicy -Scope CurrentUser
+    if ($policy -in @('Restricted', 'AllSigned', 'Undefined')) {
+        Write-Host '==> PowerShell blocks .ps1 scripts; setting CurrentUser to RemoteSigned' -ForegroundColor Yellow
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+    }
+}
+
+function Invoke-Agent {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
+    $cmd = Join-Path $env:LOCALAPPDATA 'cursor-agent\agent.cmd'
+    if (Test-Path $cmd) {
+        & $cmd @Args
+        return
+    }
+    & agent @Args
+}
+
 Write-Host '==> Installing Cursor Agent CLI (Windows native)' -ForegroundColor Cyan
 irm 'https://cursor.com/install?win32=true' | iex
 
@@ -30,7 +48,9 @@ if (-not $agentCmd) {
     }
 }
 
-Write-Host "==> agent version: $(agent --version)"
+Ensure-AgentExecutionPolicy
+
+Write-Host "==> agent version: $(Invoke-Agent --version)"
 
 $cursorDir = Join-Path $env:USERPROFILE '.cursor'
 New-Item -ItemType Directory -Force -Path $cursorDir | Out-Null
@@ -52,7 +72,7 @@ export CURSOR_API_KEY='key_xxxxxxxx'
 }
 
 Write-Host '==> Auth status:'
-agent status
+Invoke-Agent status
 
 Write-Host @'
 
@@ -61,6 +81,10 @@ Done.
 Open a NEW PowerShell or Windows Terminal window, then run:
   agent --version
   agent status
+
+If you see PSSecurityException / 禁止运行脚本:
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  # or use: & "$env:LOCALAPPDATA\cursor-agent\agent.cmd" --version
 
 If Git Bash says "Unsupported operating system: MINGW64", use PowerShell instead.
 '@

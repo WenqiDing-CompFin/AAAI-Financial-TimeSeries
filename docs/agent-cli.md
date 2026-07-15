@@ -35,6 +35,34 @@ agent --version
 agent status
 ```
 
+### Windows：禁止运行脚本（PSSecurityException）
+
+如果报错类似：
+
+```text
+无法加载文件 ...\cursor-agent\agent.ps1，因为在此系统上禁止运行脚本
+```
+
+**推荐修复**（只对当前用户生效，安全）：
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+输入 `Y` 确认后，再运行：
+
+```powershell
+agent --version
+agent status
+```
+
+**临时绕过**（不改系统策略）：
+
+```powershell
+& "$env:LOCALAPPDATA\cursor-agent\agent.cmd" --version
+& "$env:LOCALAPPDATA\cursor-agent\agent.cmd" status
+```
+
 ## 桌面终端跑不了？（常见原因）
 
 | 现象 | 原因 | 解决办法 |
@@ -43,6 +71,7 @@ agent status
 | 只有 bash 配了 PATH，你用 zsh | 旧脚本只写了 `.bashrc` | 运行 `bash scripts/setup-agent-cli.sh`（会同时配置 bash/zsh/profile） |
 | 安装成功但当前窗口找不到 | 环境变量未加载 | `export PATH="$HOME/.local/bin:$PATH"` |
 | Windows Git Bash 安装失败 | Unix 安装脚本不支持 MINGW | 改用 **PowerShell** 安装（见上） |
+| Windows `PSSecurityException` | PowerShell 执行策略禁止 `.ps1` | `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
 | `agent status` 未登录 | 缺少 API Key | 见下方「认证」 |
 | 网络/代理问题 | 无法连接 Cursor 服务 | 配置代理或检查防火墙 |
 
