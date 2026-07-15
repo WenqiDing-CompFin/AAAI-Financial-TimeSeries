@@ -1,0 +1,74 @@
+# Default TimeCAP financial experiment config
+
+experiment:
+  name: finance_sp500_event
+  seed: 42
+  output_dir: results
+
+data:
+  # "daily_event" follows original TimeCAP finance setup (20-day window, 3-class)
+  # "minute_forecast" is the S&P 500 minute-level forecasting extension
+  mode: daily_event
+  root: data/processed
+  sample_root: data/sample
+  window_size: 20
+  pred_len: 1
+  train_ratio: 0.6
+  val_ratio: 0.2
+  # Channels for daily multi-asset setup (original paper)
+  channels:
+    - sp500
+    - vix
+    - nikkei
+    - ftse
+    - gold
+    - crude_oil
+    - eur_usd
+    - usd_jpy
+    - usd_cny
+  # Label thresholds for event classification (±1% next-day move)
+  label_threshold: 0.01
+  target_indicator: sp500
+
+model:
+  d_model: 128
+  n_heads: 4
+  e_layers: 2
+  d_ff: 256
+  patch_len: 4
+  stride: 2
+  dropout: 0.1
+  activation: gelu
+  # Lightweight text encoder; swap to bert/roberta for higher capacity
+  lm_model: minilm6
+  num_class: 3
+
+train:
+  epochs: 20
+  batch_size: 32
+  learning_rate: 1.0e-4
+  patience: 5
+  num_workers: 0
+  use_gpu: true
+  gpu: 0
+
+agents:
+  # Set OPENAI_API_KEY in environment or .env
+  model: gpt-4o-mini
+  temperature: 0.2
+  max_tokens: 400
+  # Number of in-context examples for TimeCAP prompt augmentation
+  n_shot: 5
+
+forecast:
+  # Minute-level forecasting extension
+  symbol: SPY
+  interval: 1m
+  lookback: 60
+  horizon: 5
+  features:
+    - open
+    - high
+    - low
+    - close
+    - volume

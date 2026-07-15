@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project-specific
+.env
+data/raw/**
+data/processed/**
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+results/checkpoints/**
+results/metrics/**
+results/figures/**
+!results/checkpoints/.gitkeep
+!results/metrics/.gitkeep
+!results/figures/.gitkeep
+*.pt
+*.pth
+*.ckpt
+.DS_Store
