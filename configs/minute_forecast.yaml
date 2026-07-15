@@ -1,0 +1,57 @@
+# S&P 500 / SPY minute-level forecasting extension
+
+experiment:
+  name: spy_minute_forecast
+  seed: 42
+  output_dir: results
+
+data:
+  mode: minute_forecast
+  root: data/processed
+  sample_root: data/sample
+  window_size: 60
+  pred_len: 5
+  train_ratio: 0.7
+  val_ratio: 0.15
+  channels:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  target_indicator: close
+
+model:
+  d_model: 128
+  n_heads: 4
+  e_layers: 2
+  d_ff: 256
+  patch_len: 8
+  stride: 4
+  dropout: 0.1
+  activation: gelu
+  lm_model: minilm6
+  # Regression head: predict next `pred_len` close returns
+  num_class: 5
+  task: regression
+
+train:
+  epochs: 30
+  batch_size: 64
+  learning_rate: 1.0e-4
+  patience: 7
+  num_workers: 0
+  use_gpu: true
+  gpu: 0
+
+agents:
+  model: gpt-4o-mini
+  temperature: 0.2
+  max_tokens: 400
+  n_shot: 3
+
+forecast:
+  symbol: SPY
+  interval: 1m
+  lookback: 60
+  horizon: 5
