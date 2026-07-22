@@ -1,11 +1,11 @@
-# Financial Time-Series Baseline for TimeCAP Adaptation
+# Financial Forecasting Baseline and Research Scaffold
 
 [![CI](https://github.com/WenqiDing-CompFin/AAAI-Financial-TimeSeries/actions/workflows/ci.yml/badge.svg)](https://github.com/WenqiDing-CompFin/AAAI-Financial-TimeSeries/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-This repository is a **runnable financial forecasting baseline** and an honest
-starting point for adapting ideas from the AAAI 2025 TimeCAP paper. It provides
+This repository is a **runnable forecasting baseline and research scaffold** and
+an honest starting point for adapting ideas from the AAAI 2025 TimeCAP paper. It provides
 the data, evaluation, and reproducibility controls that a later model adaptation
 must beat.
 
@@ -13,6 +13,10 @@ must beat.
 > architecture. It does not claim S&P 500 minute-level results. The default data
 > are deterministic and synthetic, so every result validates the pipeline rather
 > than demonstrating historical market predictability.
+
+> **CV wording:** describe this as a *financial forecasting baseline* or
+> *time-series research scaffold*. Do not describe it as a complete TimeCAP
+> reimplementation.
 
 ## What Is Implemented
 
