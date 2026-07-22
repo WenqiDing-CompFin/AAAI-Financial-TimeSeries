@@ -201,6 +201,12 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Generated experiment artifacts
+results/*.csv
+results/*.png
+results/*.json
+!results/README.md
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
