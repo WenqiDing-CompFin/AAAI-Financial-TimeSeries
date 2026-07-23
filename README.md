@@ -18,6 +18,13 @@ must beat.
 > *time-series research scaffold*. Do not describe it as a complete TimeCAP
 > reimplementation.
 
+The repository has two deliberately separate evidence tracks:
+
+| Track | Data | Purpose |
+|---|---|---|
+| Offline harness | Fixed-seed synthetic asset panel | Verify feature timing, ticker boundaries, model selection, and deterministic CI |
+| Public-market baseline | Official Kenneth French monthly U.S. factor returns | Evaluate Ridge versus persistence on a fixed 2015-latest held-out period |
+
 ## What Is Implemented
 
 | Research control | Implementation |
@@ -30,7 +37,36 @@ must beat.
 | Baselines | Persistence and Ridge regression |
 | Final evaluation | Alpha selected on validation; model refitted on train + validation; test opened once |
 | Audit artifacts | Metrics, row-level test predictions, metadata, and a test-period chart |
-| Quality gate | Five automated tests and GitHub Actions on Python 3.10-3.12 |
+| Quality gate | Seven automated tests and GitHub Actions on Python 3.10-3.12 |
+
+## Public Real-Market Baseline
+
+The public-data run downloads the official U.S. five-factor and momentum
+archives, records their SHA-256 hashes, builds features known at month `t`, and
+predicts market excess return at `t+1`. Calendar partitions are fixed:
+
+- train through December 2004;
+- validation from January 2005 through December 2014;
+- held-out test from January 2015 through April 2026.
+
+```bash
+python run_public_experiment.py
+```
+
+The committed May 2026 source snapshot produces:
+
+| Model | Test MSE | Test MAE | Directional accuracy |
+|---|---:|---:|---:|
+| Persistence | 0.004544 | 0.050413 | 58.09% |
+| Ridge, validation-selected alpha 10.0 | 0.002055 | 0.034418 | 62.50% |
+
+Ridge improves all three registered metrics in this aggregate-data test. The
+result is a forecasting baseline, not an investable strategy: it has no security
+selection, execution model, transaction costs, event retrieval, or TimeCAP agent
+architecture. Source URLs, archive members, hashes, features, and split dates are
+stored in `results/public_market/experiment_metadata.json`.
+
+![Held-out public-market forecast diagnostic](results/public_market/heldout_predictions.png)
 
 ## Quick Start
 
@@ -96,10 +132,12 @@ AAAI-Financial-TimeSeries/
 |-- .github/workflows/ci.yml
 |-- docs/experiment_protocol.md
 |-- results/README.md
+|-- run_public_experiment.py
 |-- src/financial_timeseries/
 |   |-- data.py
 |   |-- experiment.py
-|   `-- metrics.py
+|   |-- metrics.py
+|   `-- public_data.py
 |-- tests/test_experiment.py
 |-- pyproject.toml
 `-- run_experiment.py
@@ -112,9 +150,9 @@ selection, deterministic output, and CI. Synthetic test metrics are not evidence
 of alpha and should not be quoted as real-market performance in an application,
 paper, or interview.
 
-The next credible stage is to add legally redistributable historical data with a
-documented universe, corporate-action policy, feasible execution timestamp, and
-frozen train/validation/test dates. A complete TimeCAP adaptation would then add
+The public-market track closes the absence-of-real-observations gap for aggregate
+factor forecasting. It does not close security-level universe, corporate-action,
+execution, cost, or capacity questions. A complete TimeCAP adaptation would add
 event retrieval, contextualization, augmentation, ablations, and comparison with
 the original architecture while preserving this evaluation harness.
 

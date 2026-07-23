@@ -1,0 +1,36 @@
+{
+  "source_page": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
+  "return_unit": "decimal monthly return",
+  "five_factor_archive": {
+    "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_CSV.zip",
+    "cache_file": "F-F_Research_Data_5_Factors_2x3_CSV.zip",
+    "archive_member": "F-F_Research_Data_5_Factors_2x3.csv",
+    "sha256": "ddc0280b2bb8ca6c4c6ea5b68923a5549c37259bde468202108c11e812bd4241"
+  },
+  "momentum_archive": {
+    "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_CSV.zip",
+    "cache_file": "F-F_Momentum_Factor_CSV.zip",
+    "archive_member": "F-F_Momentum_Factor.csv",
+    "sha256": "37baf72ae4eace9715e8746413d0122334c63aa4083fd1c3cf2060fa04e4bd28"
+  },
+  "source_start": "1963-07-31",
+  "source_end": "2026-05-31",
+  "source_observations": 755,
+  "features_at_month_t": [
+    "market_excess",
+    "size",
+    "value",
+    "profitability",
+    "investment",
+    "momentum",
+    "market_return_3m",
+    "market_volatility_6m"
+  ],
+  "target": "official U.S. market excess return at month t+1",
+  "train_end": "2004-12-31",
+  "validation_period": "2005-01 through 2014-12",
+  "test_period": "2015-01 through latest",
+  "selection_metric": "validation mean squared error",
+  "test_is_used_for_model_selection": false,
+  "claim_boundary": "Real aggregate factor returns; forecasting baseline only, not a TimeCAP reimplementation or investable trading strategy."
+}

@@ -42,6 +42,27 @@ def chronological_split(
     )
 
 
+def calendar_split(
+    panel: pd.DataFrame,
+    train_end: str,
+    validation_end: str,
+) -> Split:
+    """Create fixed calendar partitions that do not drift as data are updated."""
+    train_cutoff = pd.Timestamp(train_end)
+    validation_cutoff = pd.Timestamp(validation_end)
+    if train_cutoff >= validation_cutoff:
+        raise ValueError("train_end must be before validation_end")
+    dates = pd.to_datetime(panel["date"])
+    split = Split(
+        train=panel.loc[dates.le(train_cutoff)].copy(),
+        validation=panel.loc[dates.gt(train_cutoff) & dates.le(validation_cutoff)].copy(),
+        test=panel.loc[dates.gt(validation_cutoff)].copy(),
+    )
+    if split.train.empty or split.validation.empty or split.test.empty:
+        raise ValueError("fixed calendar split produced an empty partition")
+    return split
+
+
 def _fit_standardizer(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     mean = values.mean(axis=0)
     scale = values.std(axis=0, ddof=0)
@@ -71,11 +92,19 @@ def _ridge_predict(
 def run_experiment(
     panel: pd.DataFrame,
     alphas: tuple[float, ...] = (0.01, 0.1, 1.0, 10.0),
+    feature_columns: tuple[str, ...] = FEATURE_COLUMNS,
+    persistence_column: str = "return_1m",
+    split: Split | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Select Ridge alpha on validation data and report the untouched test set."""
-    split = chronological_split(panel)
-    train_x = split.train.loc[:, FEATURE_COLUMNS].to_numpy(float)
-    val_x = split.validation.loc[:, FEATURE_COLUMNS].to_numpy(float)
+    split = split or chronological_split(panel)
+    missing = set(feature_columns).union(
+        {persistence_column, "target_return_1m", "date", "ticker"}
+    ).difference(panel.columns)
+    if missing:
+        raise ValueError(f"Missing experiment columns: {sorted(missing)}")
+    train_x = split.train.loc[:, feature_columns].to_numpy(float)
+    val_x = split.validation.loc[:, feature_columns].to_numpy(float)
     train_y = split.train["target_return_1m"].to_numpy(float)
     val_y = split.validation["target_return_1m"].to_numpy(float)
     mean, scale = _fit_standardizer(train_x)
@@ -89,16 +118,16 @@ def run_experiment(
     selected_alpha = min(validation_scores, key=lambda row: row["mse"])["alpha"]
 
     combined = pd.concat([split.train, split.validation], ignore_index=True)
-    combined_x = combined.loc[:, FEATURE_COLUMNS].to_numpy(float)
+    combined_x = combined.loc[:, feature_columns].to_numpy(float)
     combined_y = combined["target_return_1m"].to_numpy(float)
     combined_mean, combined_scale = _fit_standardizer(combined_x)
     combined_x = _transform(combined_x, combined_mean, combined_scale)
     test_x = _transform(
-        split.test.loc[:, FEATURE_COLUMNS].to_numpy(float), combined_mean, combined_scale
+        split.test.loc[:, feature_columns].to_numpy(float), combined_mean, combined_scale
     )
     test_y = split.test["target_return_1m"].to_numpy(float)
     ridge_test_pred = _ridge_predict(combined_x, combined_y, test_x, selected_alpha)
-    persistence_pred = split.test["return_1m"].to_numpy(float)
+    persistence_pred = split.test[persistence_column].to_numpy(float)
 
     metrics_rows = []
     for model, predicted in (("persistence", persistence_pred), ("ridge", ridge_test_pred)):

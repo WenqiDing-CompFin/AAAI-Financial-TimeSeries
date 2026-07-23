@@ -48,3 +48,22 @@ No historical-market conclusion is allowed until the dataset documents source an
 redistribution rights, total-return adjustment, inactive securities, universe
 membership, execution timing, and a test period that was frozen before results
 were inspected.
+
+## Public Aggregate-Market Protocol
+
+`run_public_experiment.py` is a separate real-data baseline using official
+Kenneth French U.S. five-factor and momentum archives. It predicts next-month
+market excess return from factor returns and trailing market summaries available
+at the end of the current month.
+
+- Training ends in December 2004.
+- Validation covers January 2005 through December 2014.
+- Testing begins in January 2015 and never participates in alpha selection.
+- Ridge alpha is selected by validation MSE from the same frozen candidate set.
+- Persistence predicts next month with the current month's market excess return.
+- Original ZIP archives are cached outside Git; URLs, members, and SHA-256 hashes
+  are recorded with the committed derived results.
+
+This aggregate series avoids a survivorship-biased hand-picked ticker list, but
+it cannot answer security-selection, trade execution, market-impact, or capacity
+questions. It is a forecasting baseline and not a TimeCAP reproduction.

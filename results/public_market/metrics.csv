@@ -1,0 +1,3 @@
+split,model,selected_alpha,n_observations,start_date,end_date,mse,mae,directional_accuracy
+test,persistence,,136,2015-01-31,2026-04-30,0.004543954191176471,0.0504125,0.5808823529411765
+test,ridge,10.0,136,2015-01-31,2026-04-30,0.002054970960618303,0.034418274171587195,0.625
