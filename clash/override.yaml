@@ -1,0 +1,15 @@
+# Clash / Clash Verge / mihomo 覆写片段
+# 用途：订阅更新后仍强制固定端口 + 全局代理
+# 在客户端「配置覆写 / Override / Merge」中引入本文件即可
+
+mixed-port: 7890
+port: 7890
+socks-port: 7891
+redir-port: 7892
+tproxy-port: 7893
+allow-lan: true
+bind-address: "*"
+mode: global
+log-level: info
+external-controller: 0.0.0.0:9090
+ipv6: false
