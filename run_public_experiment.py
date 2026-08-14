@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from financial_timeseries.experiment import calendar_split, run_experiment  # noqa: E402
-from financial_timeseries.public_data import (  # noqa: E402
+from financial_timeseries.experiment import calendar_split, run_experiment
+from financial_timeseries.public_data import (
     PUBLIC_FEATURE_COLUMNS,
     build_public_forecast_panel,
     load_public_factor_returns,
@@ -24,9 +30,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Forecast next-month official U.S. market excess return"
     )
-    parser.add_argument(
-        "--cache-dir", type=Path, default=ROOT / "data/raw/fama_french"
-    )
+    parser.add_argument("--cache-dir", type=Path, default=ROOT / "data/raw/fama_french")
     parser.add_argument(
         "--output-dir", type=Path, default=ROOT / "results/public_market"
     )

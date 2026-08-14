@@ -6,6 +6,7 @@ import numpy as np
 
 
 def regression_metrics(actual: np.ndarray, predicted: np.ndarray) -> dict[str, float]:
+    """Compute MSE, MAE, and directional accuracy for regression outputs."""
     actual = np.asarray(actual, dtype=float)
     predicted = np.asarray(predicted, dtype=float)
     if actual.shape != predicted.shape or actual.size == 0:

@@ -5,7 +5,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import logging
+import os
 import re
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -13,8 +16,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+logger = logging.getLogger(__name__)
 
-SOURCE_PAGE = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html"
+SOURCE_PAGE = (
+    "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html"
+)
 FIVE_FACTOR_URL = (
     "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
     "F-F_Research_Data_5_Factors_2x3_CSV.zip"
@@ -33,6 +39,30 @@ PUBLIC_FEATURE_COLUMNS = (
     "market_return_3m",
     "market_volatility_6m",
 )
+
+
+def _download_with_retry(
+    url: str,
+    timeout_seconds: int = 30,
+    retries: int = 3,
+) -> bytes:
+    """Download a URL with bounded retries and exponential backoff."""
+    for attempt in range(1, retries + 1):
+        try:
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": "financial-timeseries-baseline/0.1"},
+            )
+            with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+                payload = response.read()
+            logger.info("Downloaded %s (%d bytes)", url, len(payload))
+            return payload
+        except Exception:
+            logger.exception("Download attempt %d/%d failed: %s", attempt, retries, url)
+            if attempt == retries:
+                raise
+            time.sleep(2**attempt)
+    raise RuntimeError("unreachable")
 
 
 def parse_monthly_factor_csv(
@@ -75,21 +105,25 @@ def _read_archive(
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / url.rsplit("/", 1)[-1]
     if path.exists():
+        logger.info("Using cached archive %s", path)
         payload = path.read_bytes()
     else:
-        request = urllib.request.Request(
-            url,
-            headers={"User-Agent": "financial-timeseries-baseline/0.1"},
-        )
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            payload = response.read()
-        path.write_bytes(payload)
-    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-        members = [name for name in archive.namelist() if name.lower().endswith(".csv")]
-        if len(members) != 1:
-            raise ValueError(f"Expected one CSV in {path.name}, found {members}")
-        member = members[0]
-        text = archive.read(member).decode("cp1252")
+        payload = _download_with_retry(url, timeout_seconds)
+        temporary_path = path.with_suffix(".part")
+        temporary_path.write_bytes(payload)
+        os.replace(temporary_path, path)
+    try:
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            members = [
+                name for name in archive.namelist() if name.lower().endswith(".csv")
+            ]
+            if len(members) != 1:
+                raise ValueError(f"Expected one CSV in {path.name}, found {members}")
+            member = members[0]
+            text = archive.read(member).decode("cp1252")
+    except zipfile.BadZipFile:
+        logger.exception("Corrupt archive %s; delete it and rerun", path)
+        raise
     return text, {
         "url": url,
         "cache_file": path.name,
@@ -149,11 +183,15 @@ def build_public_forecast_panel(returns: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"Missing public factor columns: {sorted(missing)}")
     panel = returns.sort_values("date").copy()
     panel["market_return_3m"] = (
-        panel["market_excess"].add(1.0).rolling(3, min_periods=3).apply(np.prod).sub(1.0)
+        panel["market_excess"]
+        .add(1.0)
+        .rolling(3, min_periods=3)
+        .apply(np.prod)
+        .sub(1.0)
     )
-    panel["market_volatility_6m"] = panel["market_excess"].rolling(
-        6, min_periods=6
-    ).std(ddof=1)
+    panel["market_volatility_6m"] = (
+        panel["market_excess"].rolling(6, min_periods=6).std(ddof=1)
+    )
     panel["target_return_1m"] = panel["market_excess"].shift(-1)
     panel["ticker"] = "US_MARKET_EXCESS"
     panel = panel.dropna(subset=[*PUBLIC_FEATURE_COLUMNS, "target_return_1m"])

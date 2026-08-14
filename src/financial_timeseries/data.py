@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 FEATURE_COLUMNS = ("return_1m", "return_3m", "volatility_6m", "volume_change_1m")
 
 
@@ -34,11 +33,7 @@ def generate_synthetic_prices(
     for step, date in enumerate(dates):
         regime = 0.002 * np.sin(step / 9.0) + rng.normal(0.0, 0.003)
         returns = (
-            0.001
-            + regime
-            + asset_bias
-            + 0.10 * previous
-            + rng.normal(0.0, asset_vol)
+            0.001 + regime + asset_bias + 0.10 * previous + rng.normal(0.0, asset_vol)
         )
         returns = np.clip(returns, -0.35, 0.35)
         prices *= 1.0 + returns

@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -8,18 +8,18 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from financial_timeseries.data import (  # noqa: E402
+from financial_timeseries.data import (
     FEATURE_COLUMNS,
     build_feature_panel,
     generate_synthetic_prices,
 )
-from financial_timeseries.experiment import (  # noqa: E402
+from financial_timeseries.experiment import (
     calendar_split,
     chronological_split,
     run_experiment,
 )
-from financial_timeseries.metrics import regression_metrics  # noqa: E402
-from financial_timeseries.public_data import (  # noqa: E402
+from financial_timeseries.metrics import regression_metrics
+from financial_timeseries.public_data import (
     PUBLIC_FEATURE_COLUMNS,
     build_public_forecast_panel,
     parse_monthly_factor_csv,
@@ -27,15 +27,19 @@ from financial_timeseries.public_data import (  # noqa: E402
 
 
 def test_generator_is_deterministic_and_target_stays_within_ticker():
-    first = build_feature_panel(generate_synthetic_prices(seed=11, assets=6, periods=36))
-    second = build_feature_panel(generate_synthetic_prices(seed=11, assets=6, periods=36))
+    first = build_feature_panel(
+        generate_synthetic_prices(seed=11, assets=6, periods=36)
+    )
+    second = build_feature_panel(
+        generate_synthetic_prices(seed=11, assets=6, periods=36)
+    )
     pd.testing.assert_frame_equal(first, second)
     assert first.groupby("ticker").size().nunique() == 1
 
 
 def test_feature_warmup_and_target_are_finite():
     panel = build_feature_panel(generate_synthetic_prices(seed=3, assets=6, periods=36))
-    values = panel[list(FEATURE_COLUMNS) + ["target_return_1m"]]
+    values = panel[[*FEATURE_COLUMNS, "target_return_1m"]]
     assert values.notna().all().all()
     assert np.isfinite(values).all().all()
 

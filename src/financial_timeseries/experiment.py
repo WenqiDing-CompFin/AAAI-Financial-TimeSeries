@@ -28,7 +28,9 @@ def chronological_split(
         raise ValueError("train and validation fractions must leave a test period")
     dates = np.array(sorted(pd.to_datetime(panel["date"]).unique()))
     train_end = max(1, int(len(dates) * train_fraction))
-    validation_end = max(train_end + 1, int(len(dates) * (train_fraction + validation_fraction)))
+    validation_end = max(
+        train_end + 1, int(len(dates) * (train_fraction + validation_fraction))
+    )
     if validation_end >= len(dates):
         raise ValueError("not enough dates for three chronological partitions")
     train_dates = set(dates[:train_end])
@@ -55,7 +57,9 @@ def calendar_split(
     dates = pd.to_datetime(panel["date"])
     split = Split(
         train=panel.loc[dates.le(train_cutoff)].copy(),
-        validation=panel.loc[dates.gt(train_cutoff) & dates.le(validation_cutoff)].copy(),
+        validation=panel.loc[
+            dates.gt(train_cutoff) & dates.le(validation_cutoff)
+        ].copy(),
         test=panel.loc[dates.gt(validation_cutoff)].copy(),
     )
     if split.train.empty or split.validation.empty or split.test.empty:
@@ -64,6 +68,7 @@ def calendar_split(
 
 
 def _fit_standardizer(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Fit a per-feature mean and standard deviation on training data only."""
     mean = values.mean(axis=0)
     scale = values.std(axis=0, ddof=0)
     scale[scale < 1e-12] = 1.0
@@ -71,20 +76,29 @@ def _fit_standardizer(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _transform(values: np.ndarray, mean: np.ndarray, scale: np.ndarray) -> np.ndarray:
+    """Standardize values with previously fitted training statistics."""
     return (values - mean) / scale
+
+
+def _require_finite(values: np.ndarray, name: str) -> None:
+    """Reject NaN or infinite values before numerical model fitting."""
+    if not np.isfinite(values).all():
+        raise ValueError(f"{name} contains NaN or Inf")
 
 
 def _ridge_predict(
     train_x: np.ndarray, train_y: np.ndarray, eval_x: np.ndarray, alpha: float
 ) -> np.ndarray:
+    """Fit ridge coefficients and return out-of-sample predictions."""
     if alpha <= 0:
         raise ValueError("alpha must be positive")
     design = np.column_stack([np.ones(len(train_x)), train_x])
     regularizer = np.eye(design.shape[1])
     regularizer[0, 0] = 0.0
-    coefficients = np.linalg.solve(
+    coefficients, *_ = np.linalg.lstsq(
         design.T @ design + alpha * regularizer,
         design.T @ train_y,
+        rcond=None,
     )
     return np.column_stack([np.ones(len(eval_x)), eval_x]) @ coefficients
 
@@ -98,15 +112,21 @@ def run_experiment(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Select Ridge alpha on validation data and report the untouched test set."""
     split = split or chronological_split(panel)
-    missing = set(feature_columns).union(
-        {persistence_column, "target_return_1m", "date", "ticker"}
-    ).difference(panel.columns)
+    missing = (
+        set(feature_columns)
+        .union({persistence_column, "target_return_1m", "date", "ticker"})
+        .difference(panel.columns)
+    )
     if missing:
         raise ValueError(f"Missing experiment columns: {sorted(missing)}")
     train_x = split.train.loc[:, feature_columns].to_numpy(float)
     val_x = split.validation.loc[:, feature_columns].to_numpy(float)
     train_y = split.train["target_return_1m"].to_numpy(float)
     val_y = split.validation["target_return_1m"].to_numpy(float)
+    _require_finite(train_x, "train features")
+    _require_finite(train_y, "train target")
+    _require_finite(val_x, "validation features")
+    _require_finite(val_y, "validation target")
     mean, scale = _fit_standardizer(train_x)
     train_x = _transform(train_x, mean, scale)
     val_x = _transform(val_x, mean, scale)
@@ -114,23 +134,31 @@ def run_experiment(
     validation_scores = []
     for alpha in alphas:
         val_pred = _ridge_predict(train_x, train_y, val_x, alpha)
-        validation_scores.append({"alpha": alpha, **regression_metrics(val_y, val_pred)})
+        validation_scores.append(
+            {"alpha": alpha, **regression_metrics(val_y, val_pred)}
+        )
     selected_alpha = min(validation_scores, key=lambda row: row["mse"])["alpha"]
 
     combined = pd.concat([split.train, split.validation], ignore_index=True)
     combined_x = combined.loc[:, feature_columns].to_numpy(float)
     combined_y = combined["target_return_1m"].to_numpy(float)
+    _require_finite(combined_x, "combined features")
+    _require_finite(combined_y, "combined target")
     combined_mean, combined_scale = _fit_standardizer(combined_x)
     combined_x = _transform(combined_x, combined_mean, combined_scale)
-    test_x = _transform(
-        split.test.loc[:, feature_columns].to_numpy(float), combined_mean, combined_scale
-    )
+    test_x = split.test.loc[:, feature_columns].to_numpy(float)
+    _require_finite(test_x, "test features")
+    test_x = _transform(test_x, combined_mean, combined_scale)
     test_y = split.test["target_return_1m"].to_numpy(float)
+    _require_finite(test_y, "test target")
     ridge_test_pred = _ridge_predict(combined_x, combined_y, test_x, selected_alpha)
     persistence_pred = split.test[persistence_column].to_numpy(float)
 
     metrics_rows = []
-    for model, predicted in (("persistence", persistence_pred), ("ridge", ridge_test_pred)):
+    for model, predicted in (
+        ("persistence", persistence_pred),
+        ("ridge", ridge_test_pred),
+    ):
         metrics_rows.append(
             {
                 "split": "test",
