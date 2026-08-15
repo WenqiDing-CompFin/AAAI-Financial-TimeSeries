@@ -1,4 +1,6 @@
+import io
 import sys
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +22,9 @@ from financial_timeseries.experiment import (
 )
 from financial_timeseries.metrics import regression_metrics
 from financial_timeseries.public_data import (
+    FIVE_FACTOR_URL,
     PUBLIC_FEATURE_COLUMNS,
+    _read_archive,
     build_public_forecast_panel,
     parse_monthly_factor_csv,
 )
@@ -68,6 +72,13 @@ def test_experiment_selects_from_validation_and_reports_test():
 def test_metrics_reject_shape_mismatch():
     with pytest.raises(ValueError):
         regression_metrics(np.ones(3), np.ones(2))
+
+
+def test_experiment_rejects_nan_target():
+    panel = build_feature_panel(generate_synthetic_prices(seed=6, assets=6, periods=48))
+    panel.loc[panel.index[0], "target_return_1m"] = np.nan
+    with pytest.raises(ValueError, match="contains NaN or Inf"):
+        run_experiment(panel)
 
 
 def test_public_factor_parser_and_feature_timing():
@@ -125,3 +136,21 @@ def test_fixed_calendar_split_and_generic_feature_experiment():
     )
     assert set(metrics["model"]) == {"persistence", "ridge"}
     assert len(predictions) == len(split.test)
+
+
+def test_corrupt_cache_is_replaced_with_fresh_download(tmp_path, monkeypatch):
+    archive_path = tmp_path / FIVE_FACTOR_URL.rsplit("/", 1)[-1]
+    archive_path.write_bytes(b"not a zip file")
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("factors.csv", "fixture\n,Mkt-RF\n199001,1.00\n")
+    monkeypatch.setattr(
+        "financial_timeseries.public_data._download_with_retry",
+        lambda *args, **kwargs: buffer.getvalue(),
+    )
+
+    text, metadata = _read_archive(FIVE_FACTOR_URL, tmp_path)
+    assert "199001" in text
+    assert archive_path.read_bytes() == buffer.getvalue()
+    assert metadata["archive_member"] == "factors.csv"

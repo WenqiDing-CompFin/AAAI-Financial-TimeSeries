@@ -99,31 +99,46 @@ def parse_monthly_factor_csv(
     return pd.DataFrame(records).sort_values("date").reset_index(drop=True)
 
 
+def _read_single_csv(payload: bytes, archive_name: str) -> tuple[str, str]:
+    """Return the archive member name and decoded CSV text from a zip payload."""
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        members = [name for name in archive.namelist() if name.lower().endswith(".csv")]
+        if len(members) != 1:
+            raise ValueError(f"Expected one CSV in {archive_name}, found {members}")
+        member = members[0]
+        return member, archive.read(member).decode("cp1252")
+
+
 def _read_archive(
     url: str, cache_dir: Path, timeout_seconds: int = 30
 ) -> tuple[str, dict[str, str]]:
+    """Read an archive, replacing a corrupt cache with one fresh download."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / url.rsplit("/", 1)[-1]
-    if path.exists():
-        logger.info("Using cached archive %s", path)
-        payload = path.read_bytes()
+    payload: bytes | None = None
+    for attempt in range(2):
+        if not path.exists():
+            payload = _download_with_retry(url, timeout_seconds)
+            temporary_path = path.with_suffix(".part")
+            temporary_path.write_bytes(payload)
+            os.replace(temporary_path, path)
+        elif payload is None:
+            logger.info("Using cached archive %s", path)
+            payload = path.read_bytes()
+        try:
+            member, text = _read_single_csv(payload, path.name)
+            break
+        except zipfile.BadZipFile:
+            if attempt == 1:
+                logger.exception(
+                    "Corrupt archive %s; giving up after one redownload", path
+                )
+                raise
+            logger.warning("Corrupt cache %s; deleting and redownloading", path)
+            path.unlink()
+            payload = None
     else:
-        payload = _download_with_retry(url, timeout_seconds)
-        temporary_path = path.with_suffix(".part")
-        temporary_path.write_bytes(payload)
-        os.replace(temporary_path, path)
-    try:
-        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-            members = [
-                name for name in archive.namelist() if name.lower().endswith(".csv")
-            ]
-            if len(members) != 1:
-                raise ValueError(f"Expected one CSV in {path.name}, found {members}")
-            member = members[0]
-            text = archive.read(member).decode("cp1252")
-    except zipfile.BadZipFile:
-        logger.exception("Corrupt archive %s; delete it and rerun", path)
-        raise
+        raise RuntimeError("unreachable")
     return text, {
         "url": url,
         "cache_file": path.name,

@@ -37,7 +37,7 @@ The repository has two deliberately separate evidence tracks:
 | Baselines | Persistence and Ridge regression |
 | Final evaluation | Alpha selected on validation; model refitted on train + validation; test opened once |
 | Audit artifacts | Metrics, row-level test predictions, metadata, and a test-period chart |
-| Quality gate | Seven automated tests and GitHub Actions on Python 3.10-3.12 |
+| Quality gate | Nine automated tests, ruff static checks, and GitHub Actions on Python 3.10-3.12 |
 
 ## Public Real-Market Baseline
 
@@ -81,6 +81,8 @@ Activate the environment, then run:
 ```bash
 python -m pip install -e ".[dev]"
 python -m pytest -q
+ruff check .
+ruff format --check .
 python run_experiment.py
 ```
 
