@@ -30,7 +30,8 @@ or investment hypothesis because the default panel is synthetic.
    selection.
 4. Alpha is chosen on validation data without consulting test metrics.
 5. After selection, the model is refitted on train plus validation and evaluated
-   once on the final chronological test partition.
+   on the final chronological test partition. The results are now visible and
+   cannot be treated as untouched for later design choices.
 
 ## Success and Failure
 
@@ -53,8 +54,9 @@ were inspected.
 
 `run_public_experiment.py` is a separate real-data baseline using official
 Kenneth French U.S. five-factor and momentum archives. It predicts next-month
-market excess return from factor returns and trailing market summaries available
-at the end of the current month.
+market excess return from factor returns and trailing market summaries labeled
+with the current month. Historical release times and revisions have not been
+verified at each decision date; these data are not certified point-in-time.
 
 - Training ends in December 2004.
 - Validation covers January 2005 through December 2014.
@@ -66,4 +68,7 @@ at the end of the current month.
 
 This aggregate series avoids a survivorship-biased hand-picked ticker list, but
 it cannot answer security-selection, trade execution, market-impact, or capacity
-questions. It is a forecasting baseline and not a TimeCAP reproduction.
+questions. It is a retrospective forecasting baseline and not a TimeCAP
+reproduction. Archive hashes establish which downloaded vintage was used, not
+whether each value was available at month-end historically. See the source's
+[historical archive](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/f-f_5_factors_2x3_archive.html).

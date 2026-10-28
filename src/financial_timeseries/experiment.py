@@ -110,7 +110,7 @@ def run_experiment(
     persistence_column: str = "return_1m",
     split: Split | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Select Ridge alpha on validation data and report the untouched test set."""
+    """Select Ridge alpha on validation data and score the later test set."""
     split = split or chronological_split(panel)
     missing = (
         set(feature_columns)

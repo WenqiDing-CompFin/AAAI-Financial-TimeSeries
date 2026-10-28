@@ -57,9 +57,13 @@ def main() -> None:
         "test_period": "2015-01 through latest",
         "selection_metric": "validation mean squared error",
         "test_is_used_for_model_selection": False,
+        "historical_publication_time_verified": False,
+        "historical_data_vintage_verified": False,
+        "test_results_previously_inspected": True,
         "claim_boundary": (
-            "Real aggregate factor returns; forecasting baseline only, not a "
-            "TimeCAP reimplementation or investable trading strategy."
+            "Retrospective aggregate factor forecasting comparison; publication "
+            "timing and historical vintages are unverified. Not a TimeCAP "
+            "reimplementation or investable trading strategy."
         ),
     }
     with (args.output_dir / "experiment_metadata.json").open(
@@ -77,7 +81,10 @@ def main() -> None:
     ax.figure.savefig(args.output_dir / "heldout_predictions.png", dpi=160)
     plt.close(ax.figure)
     print(metrics.to_string(index=False))
-    print("\nOfficial aggregate market data; no investable strategy claim is made.")
+    print(
+        "\nRetrospective aggregate data; publication timing and historical "
+        "vintages are unverified."
+    )
 
 
 if __name__ == "__main__":

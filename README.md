@@ -35,15 +35,19 @@ The repository has two deliberately separate evidence tracks:
 | Model selection | Chronological 60% train / 20% validation / 20% test split |
 | Preprocessing | Standardizer fitted on train only during selection |
 | Baselines | Persistence and Ridge regression |
-| Final evaluation | Alpha selected on validation; model refitted on train + validation; test opened once |
+| Final evaluation | Alpha selected on validation; model refitted on train + validation; later dates scored separately |
 | Audit artifacts | Metrics, row-level test predictions, metadata, and a test-period chart |
 | Quality gate | Nine automated tests, ruff static checks, and GitHub Actions on Python 3.10-3.12 |
 
 ## Public Real-Market Baseline
 
 The public-data run downloads the official U.S. five-factor and momentum
-archives, records their SHA-256 hashes, builds features known at month `t`, and
-predicts market excess return at `t+1`. Calendar partitions are fixed:
+archives, records their SHA-256 hashes, builds features labeled month `t`, and
+predicts market excess return at `t+1`. Publication times and historical data
+vintages have not been verified at each month-end decision time; this is a
+retrospective comparison, not a certified real-time forecast. The test results
+have been inspected and are not a fresh untouched test for later choices.
+Calendar partitions are fixed:
 
 - train through December 2004;
 - validation from January 2005 through December 2014;

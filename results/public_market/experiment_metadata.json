@@ -32,5 +32,8 @@
   "test_period": "2015-01 through latest",
   "selection_metric": "validation mean squared error",
   "test_is_used_for_model_selection": false,
-  "claim_boundary": "Real aggregate factor returns; forecasting baseline only, not a TimeCAP reimplementation or investable trading strategy."
+  "historical_publication_time_verified": false,
+  "historical_data_vintage_verified": false,
+  "test_results_previously_inspected": true,
+  "claim_boundary": "Retrospective aggregate factor forecasting comparison; publication timing and historical vintages are unverified. Not a TimeCAP reimplementation or investable trading strategy."
 }
